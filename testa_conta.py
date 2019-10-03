@@ -1,22 +1,41 @@
+import abc
 from datetime import datetime
+from abc import ABC, abstractmethod
 
-class Cliente:
+
+class Cliente(ABC.abc):
 
     def __init__(self):
+        pass
+
+    @abc.abstractmethod
+    def teste_abstract(self):
         pass
 
 
 class Transacao:
     def gera_transacao(self, dt, operacao, valor):
         a = 0
-        return {'data': dt, 'operacao': operacao, 'valor':valor}
+        return {'data': dt, 'operacao': operacao, 'valor': valor}
 
+
+# Desconta todas tarifas na conta
+class Tarifas:
+    def Deposito(self, valor):
+        return valor * 0.01
+
+    def Transferencia(self, valor):
+        return valor * 0.02
+
+    def Saque(self, valor):
+        return valor * 0.005
 
 
 class ContaBanco:
     # Aqui insere atributos globais
 
     quantidade = 0
+
     def data_atual(self):
         now = datetime.now()
         return now.strftime("%d/%m/%Y %H:%M:%S")
@@ -25,18 +44,15 @@ class ContaBanco:
         self.contas = []
         self.extrato = []
         self.hora_atual = []
-        ContaBanco.quantidade# utilizado em treinamento
-
-
-
+        ContaBanco.quantidade  # utilizado em treinamento
 
     def conta_saldo(self):
         print("===================================================")
-        print("BANCO ACME - CONSULTA SALDOS    "+self.data_atual())
+        print("BANCO ACME - CONSULTA SALDOS    " + self.data_atual())
         print("=================================================== ")
         print("")
         selecao = input("INFORME SUA CONTA ")
-        for info  in self.contas:
+        for info in self.contas:
             agencia = info['agencia']
             conta = info['conta']
             nome = info['nome']
@@ -47,12 +63,12 @@ class ContaBanco:
                 print("")
                 print("")
                 print("===================================================")
-                print("BANCO ACME - CONSULTA SALDOS    "+c.data_atual())
+                print("BANCO ACME - CONSULTA SALDOS    " + c.data_atual())
                 print("=================================================== ")
-                print("AGENCIA "+agencia+"/"+conta)
+                print("AGENCIA " + agencia + "/" + conta)
                 print(nome.upper())
                 print("=================================================== ")
-                print("SALDO DISPONIVEL R$ " +  "{:.2f} ".format(saldo) )
+                print("SALDO DISPONIVEL R$ " + "{:.2f} ".format(saldo))
                 print("LIMITE CREDITO   R$ " + "{:.2f} ".format(limite))
                 print("SALDO TOTAL      R$ " + "{:.2f} ".format(saldo_total))
 
@@ -108,7 +124,7 @@ class ContaBanco:
 
     def conta_deposito(self):
         print("===================================================")
-        print(" BANCO ACME - DEPOSITO CONTA  "+self.data_atual())
+        print(" BANCO ACME - DEPOSITO CONTA  " + self.data_atual())
         print("=================================================== ")
         print("")
         selecao = input("INFORME SUA CONTA ")
@@ -123,7 +139,7 @@ class ContaBanco:
                 print("")
                 print("")
                 print("===================================================")
-                print("BANCO ACME - DEPOSITO EM CONTA - "+self.data_atual())
+                print("BANCO ACME - DEPOSITO EM CONTA - " + self.data_atual())
                 print("=================================================== ")
                 print("AGENCIA " + agencia + "/" + conta)
                 print(nome.upper())
@@ -132,7 +148,9 @@ class ContaBanco:
                 print("=================================================== ")
                 deposito = input("INFORME VALOR DEPOSITO ")
                 valor_deposito = float(deposito)
-                saldo_atualizado = saldo + float(deposito)
+                # calcula a tarifa sobre o deposito
+                valor_tarifa = Tarifas.Deposito(self, valor_deposito)
+                saldo_atualizado = saldo + float(deposito) - valor_tarifa
                 print("=================================================== ")
                 print("SALDO ANTERIOR R$ " + "{:.2f} ".format(saldo))
                 print("VALOR DEPOSITO R$ " + "{:.2f} ".format(valor_deposito))
@@ -142,15 +160,18 @@ class ContaBanco:
                 self.contas[chave]['saldo'] = saldo_atualizado
                 self.contas[chave]['saldo_total'] = saldo_atualizado + limite
                 # Gravar a Transacao
-                registro = Transacao.gera_transacao(self ,self.data_atual(),"(+) DEPOSITO ", valor_deposito)
+                registro = Transacao.gera_transacao(self, self.data_atual(), "(+) DEPOSITO ", valor_deposito)
+                registrot = Transacao.gera_transacao(self, self.data_atual(), "(-) TAR DEPO ", valor_tarifa)
+
                 self.contas[chave]['transacao'].append(registro)
+                self.contas[chave]['transacao'].append(registrot)
                 a = 0
 
                 input("PRESSIONE < ENTER > PARA CONTINUAR")
                 print("")
                 print("")
                 return
-            chave+=1
+            chave += 1
         input("CONTA NAO IDENTIFICADA < ENTER > PARA CONTINUAR")
 
     def conta_saque(self):
@@ -181,10 +202,11 @@ class ContaBanco:
                 # VALIDAR O VALOR DO SAQUE
                 valor_saque = float(saque)
                 saldo_mais_limite = saldo + limite
-                autoriza = self.autoriza_saque(valor_saque,saldo_mais_limite)
+                autoriza = self.autoriza_saque(valor_saque, saldo_mais_limite)
                 if autoriza:
-                    saldo_atualizado = saldo - float(valor_saque)
-                    print("=================================================== ")
+                    valor_tarifa = Tarifas.Saque(self, valor_saque)
+                    saldo_atualizado = saldo - float(valor_saque) - float(valor_tarifa)
+                    print("=" * 50)
                     print("SALDO ANTERIOR R$ " + "{:.2f} ".format(saldo))
                     print("VALOR SAQUE    R$ " + "{:.2f} ".format(valor_saque))
                     print("SALDO ATUAL    R$ " + "{:.2f} ".format(saldo_atualizado))
@@ -196,7 +218,9 @@ class ContaBanco:
                     self.contas[chave]['saldo_total'] = sa['saldo'] + sa['limite']
                     # Gravar a Transacao
                     registro = Transacao.gera_transacao(self, self.data_atual(), "(-) SAQUE    ", valor_saque)
+                    registrot = Transacao.gera_transacao(self, self.data_atual(), "(-) TAR SAQ.", valor_tarifa)
                     self.contas[chave]['transacao'].append(registro)
+                    self.contas[chave]['transacao'].append(registrot)
                     a = 0
 
                     input("PRESSIONE < ENTER > PARA CONTINUAR")
@@ -224,33 +248,37 @@ class ContaBanco:
             diferenca = valor_saque - (saldo + limite)
             saldo = diferenca * -1
             limite = limite - diferenca
-        return {'saldo':saldo, 'limite':limite}
-
+        return {'saldo': saldo, 'limite': limite}
 
     def gerar_contas(self):
-        conta1 = {'agencia': '0001', 'conta':'00001-1', 'nome':'Renato Pereira', 'cpf': '11707899860', 'saldo': 1000.0, 'limite':0.0, 'saldo_total': 1000.0, 'data_abertura':'02/10/2019 10:41:10', 'transacao':[], 'cadastro':[{'cpf':'11707899860', 'rg':'21967629', 'telefone':'1146395855'}]}
-        conta2 = {'agencia': '0001', 'conta':'00002-2', 'nome': 'Aline Blasco',  'cpf': '43061665897','saldo': 1000.0,  'limite':0.0, 'saldo_total': 1000.0, 'data_abertura':'02/10/2019 10:41:10', 'transacao':[], 'cadastro':[{'cpf':'43061668597', 'rg':'21963222', 'telefone':'1146395855'}]}
+        conta1 = {'agencia': '0001', 'conta': '00001-1', 'nome': 'Renato Pereira', 'cpf': '11707899860',
+                  'saldo': 1000.0, 'limite': 0.0, 'saldo_total': 1000.0, 'data_abertura': '02/10/2019 10:41:10',
+                  'transacao': [{'data': '01/10/2019 10:11:54', 'operacao': 'DEPOSITO INICIAL', 'valor': 1000.0}],
+                  'cadastro': [{'cpf': '11707899860', 'rg': '21967629', 'telefone': '1146395855'}]}
+        conta2 = {'agencia': '0001', 'conta': '00002-2', 'nome': 'Aline Blasco', 'cpf': '43061665897', 'saldo': 1000.0,
+                  'limite': 0.0, 'saldo_total': 1000.0, 'data_abertura': '02/10/2019 10:41:10',
+                  'transacao': [{'data': '01/10/2019 10:11:54', 'operacao': 'DEPOSITO INICIAL', 'valor': 1000.0}],
+                  'cadastro': [{'cpf': '43061668597', 'rg': '21963222', 'telefone': '1146395855'}]}
         self.contas.append(conta1)
         self.contas.append(conta2)
         return self.contas
 
     def conta_lista(self):
         print("===================================================")
-        print("BANCO ACME - CONTAS ATIVAS -  "+self.data_atual())
+        print("BANCO ACME - CONTAS ATIVAS -  " + self.data_atual())
         print("=================================================== ")
         print("")
         for conta in self.contas:
-            print(conta['agencia'] +"/"+conta['conta']+" CPF "+conta['cpf']+"  "+conta['nome'])
+            print(conta['agencia'] + "/" + conta['conta'] + " CPF " + conta['cpf'] + "  " + conta['nome'])
 
         print("")
         input("PRESSIONE < ENTER > PARA CONTINUAR")
-
 
     def conta_abertura(self):
         print("")
         print("")
         print("===================================================")
-        print("BANCO ACME - ABERTURA DE CONTAS "+self.data_atual())
+        print("BANCO ACME - ABERTURA DE CONTAS " + self.data_atual())
         print("=================================================== ")
         print("")
         input("PRESSIONE < ENTER > PARA CONTINUAR")
@@ -258,13 +286,12 @@ class ContaBanco:
 
 if __name__ == '__main__':
 
-
     c = ContaBanco()
     con = c.gerar_contas()
     acao = True
     while acao == True:
         print("===================================================")
-        print("BANCO ACME - ABC               "+c.data_atual())
+        print("BANCO ACME - ABC               " + c.data_atual())
         print("=================================================== ")
         print("                 MENU CLIENTE")
         print("=================================================== ")
@@ -301,7 +328,3 @@ if __name__ == '__main__':
             c.conta_abertura()
         elif int(escolha) == 99:
             acao = False
-
-
-
-
